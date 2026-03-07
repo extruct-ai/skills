@@ -593,6 +593,7 @@ Check that:
 - `--pretty` for human-readable JSON
 - `--timeout <seconds>` to override request timeout
 - `--base-url <url>` to override the API base URL
+- these flags can be placed before the resource, after the resource, or after the final action; for example: `<extruct_api_cli> tables list --limit 20 --pretty`
 
 ## References
 

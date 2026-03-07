@@ -12,6 +12,7 @@
   "plugins": [
     {
       "name": "extruct-skills",
+      "version": "1.0.0",
       "description": "Official Extruct AI skill bundle for semantic search, lookalike search, Deep Search, table operations, enrichment, and contact-finding workflows.",
       "source": "./",
       "strict": false,
