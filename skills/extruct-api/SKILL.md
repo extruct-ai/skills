@@ -39,7 +39,7 @@ Example:
 
 This section covers the default operating intent of the skill: identify the Extruct object the user is working with, choose the right execution path, inspect before mutating, and use the CLI to carry the task through to completion.
 
-1. Resolve `<extruct_api_cli>` first, then establish API access. Before the first CLI call in a conversation, run `<extruct_api_cli> auth user`. If it fails, run `<extruct_api_cli> auth healthcheck` to distinguish credential problems from connectivity issues.
+1. Resolve `<extruct_api_cli>` first, then establish API access. Before the first authenticated CLI call in a conversation, run `<extruct_api_cli> auth user`. If it fails, run `<extruct_api_cli> healthcheck` to distinguish credential problems from connectivity issues.
 2. Classify the request into the right Extruct path:
    - company discovery: semantic search, lookalike search, or Deep Search
    - existing table operation: inspect, add/update rows or columns, run, poll, read
@@ -526,7 +526,7 @@ Run:
 
 ```bash
 <extruct_api_cli> auth user
-<extruct_api_cli> auth healthcheck
+<extruct_api_cli> healthcheck
 ```
 
 If `auth user` fails, the token or account context is wrong. If `healthcheck` fails too, treat it as connectivity or service health.

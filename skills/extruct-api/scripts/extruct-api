@@ -109,7 +109,7 @@ def _parse_response_body(raw: bytes) -> Any:
 def _make_request(
     *,
     base_url: str,
-    token: str,
+    token: str | None,
     method: str,
     path: str,
     timeout: float,
@@ -128,9 +128,10 @@ def _make_request(
         body_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
     headers = {
-        "Authorization": f"Bearer {token}",
         "Accept": "application/json",
     }
+    if token is not None:
+        headers["Authorization"] = f"Bearer {token}"
     if body_bytes is not None:
         headers["Content-Type"] = "application/json"
 
@@ -608,11 +609,14 @@ def _execute_request(
     query: dict[str, Any] | None = None,
     payload: Any = None,
     transform: str | None = None,
+    requires_auth: bool = True,
 ) -> int:
-    token, token_error, token_exit = _resolve_token(method=method, path=path)
-    if token is None:
-        _json_print(token_error, args.pretty)
-        return token_exit
+    token: str | None = None
+    if requires_auth:
+        token, token_error, token_exit = _resolve_token(method=method, path=path)
+        if token is None:
+            _json_print(token_error, args.pretty)
+            return token_exit
 
     response_payload, exit_code = _make_request(
         base_url=args.base_url,
@@ -654,7 +658,9 @@ def _build_parser() -> argparse.ArgumentParser:
     auth = resources.add_parser("auth")
     auth_actions = auth.add_subparsers(dest="action", required=True)
     auth_actions.add_parser("user")
-    auth_actions.add_parser("healthcheck")
+
+    healthcheck = resources.add_parser("healthcheck", help="Run an unauthenticated service health check.")
+    healthcheck.set_defaults(action="healthcheck")
 
     companies = resources.add_parser("companies", help="Company discovery commands.")
     companies_actions = companies.add_subparsers(dest="action", required=True)
@@ -810,9 +816,11 @@ def _build_parser() -> argparse.ArgumentParser:
 def _auth_method_path(action: str) -> tuple[str, str]:
     if action == "user":
         return "GET", "/v1/user"
-    if action == "healthcheck":
-        return "GET", "/v1/healthcheck"
     raise ValueError(f"Unsupported auth action: {action}")
+
+
+def _healthcheck_method_path() -> tuple[str, str]:
+    return "GET", "/v1/healthcheck"
 
 
 def _companies_method_path(action: str, company_identifier: str | None = None) -> tuple[str, str]:
@@ -821,7 +829,8 @@ def _companies_method_path(action: str, company_identifier: str | None = None) -
     if action == "similar":
         if company_identifier is None:
             raise ValueError("company_identifier is required for similar action.")
-        return "GET", f"/v1/companies/{company_identifier}/similar"
+        encoded_identifier = urllib.parse.quote(company_identifier, safe="")
+        return "GET", f"/v1/companies/{encoded_identifier}/similar"
     raise ValueError(f"Unsupported companies action: {action}")
 
 
@@ -898,6 +907,11 @@ def _deep_search_method_path(action: str, task_id: str | None = None) -> tuple[s
 def _handle_auth(args: argparse.Namespace) -> int:
     method, path = _auth_method_path(args.action)
     return _execute_request(args, method=method, path=path)
+
+
+def _handle_healthcheck(args: argparse.Namespace) -> int:
+    method, path = _healthcheck_method_path()
+    return _execute_request(args, method=method, path=path, requires_auth=False)
 
 
 def _handle_companies(args: argparse.Namespace) -> int:
@@ -1297,6 +1311,8 @@ def main() -> int:
     try:
         if args.resource == "auth":
             return _handle_auth(args)
+        if args.resource == "healthcheck":
+            return _handle_healthcheck(args)
         if args.resource == "companies":
             return _handle_companies(args)
         if args.resource == "tables":
