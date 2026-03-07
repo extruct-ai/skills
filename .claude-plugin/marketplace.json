@@ -1,0 +1,23 @@
+{
+  "name": "extruct-skills",
+  "owner": {
+    "name": "Extruct AI",
+    "url": "https://extruct.ai"
+  },
+  "metadata": {
+    "description": "Official Extruct AI skills for company discovery, Deep Search, AI tables, enrichment, and people workflows",
+    "version": "1.0.0",
+    "repository": "https://github.com/extruct-ai/skills"
+  },
+  "plugins": [
+    {
+      "name": "extruct-skills",
+      "description": "Official Extruct AI skill bundle for semantic search, lookalike search, Deep Search, table operations, enrichment, and contact-finding workflows.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/extruct-api"
+      ]
+    }
+  ]
+}
