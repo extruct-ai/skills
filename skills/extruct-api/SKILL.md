@@ -324,6 +324,8 @@ Delete a column:
 Default incremental run:
 
 ```bash
+<extruct_api_cli> tables run <table_id>
+
 <extruct_api_cli> tables run <table_id> --payload '{
   "mode":"new",
   "columns":["<column_id_1>","<column_id_2>"]
@@ -341,6 +343,7 @@ Poll and then read a small result page:
 Table-operation defaults:
 
 - prefer `mode: "new"` when iterating on an existing table
+- bare `tables run <table_id>` is shorthand for `{"mode":"new"}`
 - supported run modes are `new`, `all`, and `failed`
 - pass explicit column ids when the user only wants new work
 - inspect a small result page before scaling out, and use `--columns` whenever you only need a surgical slice of the data

@@ -1002,10 +1002,13 @@ def _handle_tables(args: argparse.Namespace) -> int:
         return _execute_request(args, method=method, path=path, query=query)
 
     if args.action == "run":
-        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
-        if payload_error is not None:
-            _json_print(payload_error, args.pretty)
-            return payload_code
+        if args.payload is None and args.payload_file is None:
+            payload = {"mode": "new"}
+        else:
+            payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+            if payload_error is not None:
+                _json_print(payload_error, args.pretty)
+                return payload_code
         return _execute_request(args, method=method, path=path, payload=payload)
 
     if args.action == "poll":
