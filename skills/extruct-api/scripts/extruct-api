@@ -647,27 +647,38 @@ def _add_payload_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--payload-file", help="Path to JSON payload file, or '-' for stdin.")
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="extruct-api")
+def _build_global_options_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--pretty", action="store_true")
+    return parser
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    global_options = _build_global_options_parser()
+    parser = argparse.ArgumentParser(prog="extruct-api", parents=[global_options])
 
     resources = parser.add_subparsers(dest="resource", required=True)
 
-    auth = resources.add_parser("auth")
+    auth = resources.add_parser("auth", parents=[global_options])
     auth_actions = auth.add_subparsers(dest="action", required=True)
-    auth_actions.add_parser("user")
+    auth_actions.add_parser("user", parents=[global_options])
 
-    healthcheck = resources.add_parser("healthcheck", help="Run an unauthenticated service health check.")
+    healthcheck = resources.add_parser(
+        "healthcheck",
+        help="Run an unauthenticated service health check.",
+        parents=[global_options],
+    )
     healthcheck.set_defaults(action="healthcheck")
 
-    companies = resources.add_parser("companies", help="Company discovery commands.")
+    companies = resources.add_parser("companies", help="Company discovery commands.", parents=[global_options])
     companies_actions = companies.add_subparsers(dest="action", required=True)
 
     companies_search = companies_actions.add_parser(
         "search",
         help="Search companies by natural-language query.",
+        parents=[global_options],
     )
     companies_search.add_argument("--query", required=True, help="Natural-language search query.")
     companies_search.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
@@ -677,6 +688,7 @@ def _build_parser() -> argparse.ArgumentParser:
     companies_similar = companies_actions.add_parser(
         "similar",
         help="Find companies similar to a seed company. Prefer domain identifiers in normal usage.",
+        parents=[global_options],
     )
     companies_similar.add_argument(
         "--company-identifier",
@@ -687,44 +699,44 @@ def _build_parser() -> argparse.ArgumentParser:
     companies_similar.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
     companies_similar.add_argument("--filters", help="Search filters JSON string.")
 
-    tables = resources.add_parser("tables", help="Table commands.")
+    tables = resources.add_parser("tables", help="Table commands.", parents=[global_options])
     tables_actions = tables.add_subparsers(dest="action", required=True)
 
-    tables_list = tables_actions.add_parser("list", help="List tables.")
+    tables_list = tables_actions.add_parser("list", help="List tables.", parents=[global_options])
     tables_list.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
     tables_list.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
     tables_list.add_argument("--view", choices=("full", "minimal"))
     tables_list.add_argument("--kind", choices=("generic", "company", "people"))
     tables_list.add_argument("--scope", choices=("personal", "organization"))
 
-    tables_create = tables_actions.add_parser("create", help="Create a table.")
+    tables_create = tables_actions.add_parser("create", help="Create a table.", parents=[global_options])
     _add_payload_args(tables_create)
 
-    tables_get = tables_actions.add_parser("get", help="Get a table.")
+    tables_get = tables_actions.add_parser("get", help="Get a table.", parents=[global_options])
     tables_get.add_argument("table_id")
 
-    tables_update = tables_actions.add_parser("update", help="Update a table.")
+    tables_update = tables_actions.add_parser("update", help="Update a table.", parents=[global_options])
     tables_update.add_argument("table_id")
     _add_payload_args(tables_update)
 
-    tables_delete = tables_actions.add_parser("delete", help="Delete a table.")
+    tables_delete = tables_actions.add_parser("delete", help="Delete a table.", parents=[global_options])
     tables_delete.add_argument("table_id")
     tables_delete.add_argument("--yes", action="store_true", help="Confirm deletion.")
 
-    tables_clone = tables_actions.add_parser("clone", help="Clone a table.")
+    tables_clone = tables_actions.add_parser("clone", help="Clone a table.", parents=[global_options])
     tables_clone.add_argument("table_id")
     tables_clone.add_argument("--schema-only", action="store_true", help="Clone schema only.")
 
-    tables_run = tables_actions.add_parser("run", help="Run a table.")
+    tables_run = tables_actions.add_parser("run", help="Run a table.", parents=[global_options])
     tables_run.add_argument("table_id")
     _add_payload_args(tables_run)
 
-    tables_poll = tables_actions.add_parser("poll", help="Poll table execution until idle.")
+    tables_poll = tables_actions.add_parser("poll", help="Poll table execution until idle.", parents=[global_options])
     tables_poll.add_argument("table_id")
     tables_poll.add_argument("--interval", type=float, default=DEFAULT_POLL_INTERVAL_SECONDS)
     tables_poll.add_argument("--max-attempts", type=int, default=DEFAULT_POLL_MAX_ATTEMPTS)
 
-    tables_data = tables_actions.add_parser("data", help="Get paginated table data.")
+    tables_data = tables_actions.add_parser("data", help="Get paginated table data.", parents=[global_options])
     tables_data.add_argument("table_id")
     tables_data.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
     tables_data.add_argument("--limit", type=int, default=DEFAULT_TABLE_DATA_LIMIT)
@@ -733,37 +745,37 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Comma-separated column keys to include in the returned table data.",
     )
 
-    rows = resources.add_parser("rows", help="Row commands.")
+    rows = resources.add_parser("rows", help="Row commands.", parents=[global_options])
     rows_actions = rows.add_subparsers(dest="action", required=True)
 
-    rows_create = rows_actions.add_parser("create", help="Create rows in a table.")
+    rows_create = rows_actions.add_parser("create", help="Create rows in a table.", parents=[global_options])
     rows_create.add_argument("table_id")
     _add_payload_args(rows_create)
 
-    rows_get = rows_actions.add_parser("get", help="Get a single row.")
+    rows_get = rows_actions.add_parser("get", help="Get a single row.", parents=[global_options])
     rows_get.add_argument("table_id")
     rows_get.add_argument("row_id")
 
-    rows_update = rows_actions.add_parser("update", help="Update rows in a table.")
+    rows_update = rows_actions.add_parser("update", help="Update rows in a table.", parents=[global_options])
     rows_update.add_argument("table_id")
     _add_payload_args(rows_update)
 
-    columns = resources.add_parser("columns", help="Column commands.")
+    columns = resources.add_parser("columns", help="Column commands.", parents=[global_options])
     columns_actions = columns.add_subparsers(dest="action", required=True)
 
-    columns_list = columns_actions.add_parser("list", help="List columns for a table.")
+    columns_list = columns_actions.add_parser("list", help="List columns for a table.", parents=[global_options])
     columns_list.add_argument("table_id")
 
-    columns_add = columns_actions.add_parser("add", help="Add columns to a table.")
+    columns_add = columns_actions.add_parser("add", help="Add columns to a table.", parents=[global_options])
     columns_add.add_argument("table_id")
     _add_payload_args(columns_add)
 
-    columns_update = columns_actions.add_parser("update", help="Update a table column.")
+    columns_update = columns_actions.add_parser("update", help="Update a table column.", parents=[global_options])
     columns_update.add_argument("table_id")
     columns_update.add_argument("column_id")
     _add_payload_args(columns_update)
 
-    columns_delete = columns_actions.add_parser("delete", help="Delete a table column.")
+    columns_delete = columns_actions.add_parser("delete", help="Delete a table column.", parents=[global_options])
     columns_delete.add_argument("table_id")
     columns_delete.add_argument("column_id")
     columns_delete.add_argument("--yes", action="store_true", help="Confirm deletion.")
@@ -771,25 +783,28 @@ def _build_parser() -> argparse.ArgumentParser:
     deep_search = resources.add_parser(
         "deep-search",
         help="Deep Search task commands. Tasks are asynchronous and results can be fetched while running.",
+        parents=[global_options],
     )
     deep_search_actions = deep_search.add_subparsers(dest="action", required=True)
 
-    deep_search_list = deep_search_actions.add_parser("list", help="List Deep Search tasks.")
+    deep_search_list = deep_search_actions.add_parser("list", help="List Deep Search tasks.", parents=[global_options])
     deep_search_list.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
     deep_search_list.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
 
     deep_search_create = deep_search_actions.add_parser(
         "create",
         help="Create a Deep Search task. Requires payload with non-empty query.",
+        parents=[global_options],
     )
     _add_payload_args(deep_search_create)
 
-    deep_search_get = deep_search_actions.add_parser("get", help="Get a Deep Search task.")
+    deep_search_get = deep_search_actions.add_parser("get", help="Get a Deep Search task.", parents=[global_options])
     deep_search_get.add_argument("task_id")
 
     deep_search_results = deep_search_actions.add_parser(
         "results",
         help="Get paginated Deep Search results. Results can be fetched while the task is running.",
+        parents=[global_options],
     )
     deep_search_results.add_argument("task_id")
     deep_search_results.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
@@ -798,6 +813,7 @@ def _build_parser() -> argparse.ArgumentParser:
     deep_search_resume = deep_search_actions.add_parser(
         "resume",
         help="Resume a Deep Search task with a payload.",
+        parents=[global_options],
     )
     deep_search_resume.add_argument("task_id")
     _add_payload_args(deep_search_resume)
@@ -805,6 +821,7 @@ def _build_parser() -> argparse.ArgumentParser:
     deep_search_poll = deep_search_actions.add_parser(
         "poll",
         help="Poll a Deep Search task until status=done or is_exhausted=true.",
+        parents=[global_options],
     )
     deep_search_poll.add_argument("task_id")
     deep_search_poll.add_argument("--interval", type=float, default=DEFAULT_DEEP_SEARCH_POLL_INTERVAL_SECONDS)
