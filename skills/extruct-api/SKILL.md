@@ -86,8 +86,6 @@ Use `--filters` when the user specifies geography, city, company size, or founde
 }
 ```
 
-If search filters or pagination behavior appear different from the guidance here, verify current request and response details in the official API reference before guessing.
-
 ```json
 {
   "range": {
@@ -98,6 +96,8 @@ If search filters or pagination behavior appear different from the guidance here
   }
 }
 ```
+
+If search filters or pagination behavior appear different from the guidance here, verify current request and response details in the official API reference before guessing.
 
 ### Lookalike Search
 
