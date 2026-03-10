@@ -581,6 +581,7 @@ Check that:
 
 - split multi-job prompts into separate columns
 - use `select`, `multiselect`, `numeric`, `money`, `date`, `grade`, or `json` instead of defaulting to `text`
+- use the simplest format that captures the business value; do not pack Extruct explanation or source metadata into `json` unless the user explicitly wants those fields as table data
 - derive downstream classifications with `llm` after researching the source fact once
 
 ### Retry Behavior

@@ -225,7 +225,18 @@ Guidance:
 - use `select` or `multiselect` when the answer should be constrained to labels
 - use `money` for revenue, ARR, valuation, or funding
 - use `grade` for bounded scoring rubrics
-- use `json` only when the structure is genuinely useful downstream
+- use the simplest format that captures the business value of the answer
+- Extruct already returns sources and explanation outside the answer; do not duplicate that wrapper metadata inside `output_schema`
+- do not add provenance fields such as `sources`, `source_url`, `evidence_url`, `notes`, `reasoning`, or `why` unless the user explicitly wants those as first-class table data
+- prefer `select` for bounded classifications even when you also want justification; Extruct's response metadata already carries the supporting explanation
+- use `json` only when the answer itself is genuinely multi-field or repeating domain data that must live in the table, such as a competitors array, launches list, or product catalog slice
+
+Anti-pattern:
+
+- do not model a bounded decision as `json` just to carry evidence alongside it
+- bad fit: remote hiring as `{status, evidence_url, notes}`
+- better fit: `remote_hiring_status` as `select` with labels such as `yes`, `no`, `mixed`, `unclear`
+- if downstream workflows truly need a first-class URL or another separate field, add that as its own column instead of packing it into the same `json` answer
 
 If you set `output_format` to `json`, `output_schema` is required.
 
@@ -270,6 +281,13 @@ Good prompts are:
 - explicit about what should come back
 - grounded in the current row or explicit upstream inputs
 
+Prompt-design rule:
+
+- ask Extruct for the business answer, not for duplicated provenance
+- do not ask the model to return URLs, notes, source lists, or reasoning inside the answer just because they help justify the answer; Extruct already returns sources and explanation outside the answer
+- if the user needs both a classification and a durable field for automation or export, split that into separate columns
+- prefer one bounded output per column over one `json` blob that mixes classification, evidence, and commentary
+
 Research prompt pattern:
 
 ```text
@@ -285,6 +303,14 @@ Pricing Notes
 ---
 {pricing_notes}
 ---
+```
+
+Bounded classification pattern:
+
+```text
+Classify the company's remote hiring status into exactly one option:
+yes, no, mixed, unclear.
+Return the label only.
 ```
 
 Competitor discovery pattern:
@@ -333,10 +359,12 @@ Fix:
 Cause:
 
 - too many `text` outputs
+- bounded answers were packed into `json` with evidence or commentary fields
 
 Fix:
 
 - move repeated decisions into `select`, `multiselect`, `numeric`, `money`, `date`, `phone`, `grade`, or `json`
+- keep provenance in Extruct's wrapper metadata unless the user explicitly needs it as table data
 
 ### A Column Feels Expensive
 
@@ -357,7 +385,11 @@ If you are unsure:
 - default to built-in column kinds when available
 - default to `research_pro` for company facts
 - default to `llm` for downstream transformations
-- default to structured output formats when the result will be reused later
+- default to the simplest output format that preserves downstream value
+- default to `select` for bounded classifications
+- default to separate columns over one `json` blob when the fields have different jobs
+- default to `json` only when the answer is naturally multi-field domain data
+- do not model Extruct wrapper metadata such as sources or explanation inside `output_schema` unless the user explicitly wants those fields in the table
 - default to natural-language prompts with no variables on `company` and `people` tables
 - add explicit references only for intentional chaining or on `generic` tables
 
@@ -504,6 +536,38 @@ Notes before you copy:
             "properties": {
               "date": {"type": "string"},
               "headline": {"type": "string"},
+              "url": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Product Launches Last 12 Months
+
+```json
+{
+  "kind": "agent",
+  "name": "Product Launches",
+  "key": "product_launches",
+  "value": {
+    "agent_type": "research_pro",
+    "prompt": "List the company's notable product launches from the last 12 months, newest first. Return one object with a launches array. Each launch should include date, name, summary, and url when available. Leave out vague marketing updates that are not real launches.",
+    "output_format": "json",
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "launches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {"type": "string"},
+              "name": {"type": "string"},
+              "summary": {"type": "string"},
               "url": {"type": "string"}
             }
           }
@@ -766,15 +830,13 @@ Requires:
   "key": "prioritization",
   "value": {
     "agent_type": "llm",
-    "prompt": "You are a go-to-market analyst. Score ICP fit and buying intent. Return ONLY valid JSON with: icp_fit_score, icp_fit_reasoning, buying_intent_score, buying_intent_reasoning, positive_signals, negative_signals, recommended_action, recommended_action_reasoning, outreach_hook.\n\nCompany Profile\n---\n{company_profile}\n---\n\nExpansion Signals\n---\n{expansion_signals}\n---\n\nAnnual Revenue\n---\n{annual_revenue}\n---\n\nRecent News\n---\n{recent_news}\n---",
+    "prompt": "You are a go-to-market analyst. Score ICP fit and buying intent. Return ONLY valid JSON with: icp_fit_score, buying_intent_score, positive_signals, negative_signals, recommended_action, outreach_hook.\n\nCompany Profile\n---\n{company_profile}\n---\n\nExpansion Signals\n---\n{expansion_signals}\n---\n\nAnnual Revenue\n---\n{annual_revenue}\n---\n\nRecent News\n---\n{recent_news}\n---",
     "output_format": "json",
     "output_schema": {
       "type": "object",
       "properties": {
         "icp_fit_score": {"type": "number"},
-        "icp_fit_reasoning": {"type": "string"},
         "buying_intent_score": {"type": "number"},
-        "buying_intent_reasoning": {"type": "string"},
         "positive_signals": {
           "type": "array",
           "items": {"type": "string"}
@@ -784,7 +846,6 @@ Requires:
           "items": {"type": "string"}
         },
         "recommended_action": {"type": "string"},
-        "recommended_action_reasoning": {"type": "string"},
         "outreach_hook": {"type": "string"}
       }
     }
