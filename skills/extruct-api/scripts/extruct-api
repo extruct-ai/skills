@@ -517,6 +517,40 @@ def _validate_deep_search_resume_payload(payload: Any, *, path: str) -> tuple[An
     return None, EXIT_SUCCESS
 
 
+def _validate_rows_delete_payload(payload: Any, *, path: str) -> tuple[Any | None, int]:
+    payload_error, payload_code = _validate_payload_object(payload, path=path)
+    if payload_error is not None:
+        return payload_error, payload_code
+
+    rows = payload.get("rows")
+    if rows is None:
+        return _cli_error(
+            message="Invalid payload: 'rows' is required.",
+            path=path,
+        )
+    if not isinstance(rows, list):
+        return _cli_error(
+            message="Invalid payload: 'rows' must be an array of row IDs.",
+            path=path,
+            details={"rows": rows},
+        )
+    if not rows:
+        return _cli_error(
+            message="Invalid payload: 'rows' must contain at least one row ID.",
+            path=path,
+        )
+
+    invalid_row_ids = [row_id for row_id in rows if not isinstance(row_id, str) or not row_id.strip()]
+    if invalid_row_ids:
+        return _cli_error(
+            message="Invalid payload: every item in 'rows' must be a non-empty string.",
+            path=path,
+            details={"invalid_rows": invalid_row_ids},
+        )
+
+    return None, EXIT_SUCCESS
+
+
 def _extract_columns(payload: Any, *, path: str) -> tuple[Any | None, Any | None, int]:
     if isinstance(payload, dict) and "columns" in payload:
         return payload["columns"], None, EXIT_SUCCESS
@@ -760,6 +794,11 @@ def _build_parser() -> argparse.ArgumentParser:
     rows_update.add_argument("table_id")
     _add_payload_args(rows_update)
 
+    rows_delete = rows_actions.add_parser("delete", help="Delete rows from a table.", parents=[global_options])
+    rows_delete.add_argument("table_id")
+    rows_delete.add_argument("--yes", action="store_true", help="Confirm deletion.")
+    _add_payload_args(rows_delete)
+
     columns = resources.add_parser("columns", help="Column commands.", parents=[global_options])
     columns_actions = columns.add_subparsers(dest="action", required=True)
 
@@ -884,6 +923,8 @@ def _rows_method_path(action: str, table_id: str, row_id: str | None = None) -> 
         return "GET", f"/v1/tables/{table_id}/rows/{row_id}"
     if action == "update":
         return "PATCH", f"/v1/tables/{table_id}/rows"
+    if action == "delete":
+        return "DELETE", f"/v1/tables/{table_id}/rows"
     raise ValueError(f"Unsupported rows action: {action}")
 
 
@@ -1150,10 +1191,23 @@ def _handle_rows(args: argparse.Namespace) -> int:
         return _execute_request(args, method=method, path=path)
 
     method, path = _rows_method_path(args.action, args.table_id)
+    if args.action == "delete":
+        yes_error, yes_code = _validate_yes(args.yes, flag="--yes", path=path)
+        if yes_error is not None:
+            _json_print(yes_error, args.pretty)
+            return yes_code
+
     payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
     if payload_error is not None:
         _json_print(payload_error, args.pretty)
         return payload_code
+
+    if args.action == "delete":
+        validation_error, validation_code = _validate_rows_delete_payload(payload, path=path)
+        if validation_error is not None:
+            _json_print(validation_error, args.pretty)
+            return validation_code
+
     return _execute_request(args, method=method, path=path, payload=payload)
 
 

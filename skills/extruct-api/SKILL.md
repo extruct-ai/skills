@@ -302,10 +302,11 @@ Clone or delete:
 `--schema-only` clones the columns and structure without copying row data.
 Without `--schema-only`, clone copies both schema and rows.
 
-### Add Or Update Rows
+### Add, Update, Or Delete Rows
 
 Use company domains or URLs as the safest `input` on company tables.
 Default to `"run": false` while iterating so you can inspect rows and columns before spending more work. Only switch to `"run": true` when the user explicitly wants add-and-run in one step.
+Before deleting, inspect either the specific row with `rows get` or a small `tables data` page so you only remove the intended records.
 
 Create rows:
 
@@ -332,6 +333,23 @@ Update rows:
   "run":false
 }'
 ```
+
+Delete rows:
+
+```bash
+<extruct_api_cli> rows delete <table_id> --yes --payload '{
+  "rows":[
+    "<row_id_1>",
+    "<row_id_2>"
+  ]
+}'
+```
+
+Row-deletion notes:
+
+- deletion is bulk and row-ID based
+- `rows delete` requires `--yes`
+- a successful response returns the deleted row IDs
 
 ### Add, Update, Or Delete Columns
 
