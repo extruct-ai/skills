@@ -41,6 +41,8 @@ This section covers the default operating intent of the skill: identify the Extr
 
 1. Resolve `<extruct_api_cli>` first, then establish API access. Before the first authenticated CLI call in a conversation, run `<extruct_api_cli> auth user`. If it fails, run `<extruct_api_cli> healthcheck` to distinguish credential problems from connectivity issues.
 2. Classify the request into the right Extruct path:
+   - if the user provides an Extruct table URL or a raw table UUID, treat it as an existing table operation first
+   - if the user provides an Extruct task URL or a raw task UUID, treat it as an existing Deep Search task first
    - company discovery: semantic search, lookalike search, or Deep Search
    - existing table operation: inspect, add/update rows or columns, run, poll, read
    - company-table workflow: enrich or score companies in a reusable table
@@ -52,6 +54,62 @@ This section covers the default operating intent of the skill: identify the Extr
 If any request shape, field name, response contract, or endpoint capability is uncertain while executing this workflow, re-check the official API reference before proceeding:
 
 - https://www.extruct.ai/docs/api-reference/introduction
+
+## Resolve Extruct Identifiers
+
+Users may provide Extruct objects as raw IDs or as dashboard URLs.
+
+Interpret them as follows:
+
+- if the user provides an Extruct table URL such as `https://app.extruct.ai/tables/<table_id>` or `http://app.extruct.ai/tables/<table_id>`, treat the path segment after `/tables/` as the table id
+- if the user provides an Extruct task URL such as `https://app.extruct.ai/tasks/<task_id>` or `http://app.extruct.ai/tasks/<task_id>`, treat the path segment after `/tasks/` as the Deep Search task id
+- if the URL includes extra path segments, query params, or fragments, still extract the id from the `/tables/<table_id>` or `/tasks/<task_id>` segment
+- if the user provides a raw table UUID, use it directly as the table id
+- if the user provides a raw task UUID, use it directly as the task id
+- do not ask the user to restate an id that is already present in the URL
+- when a table URL is present, default to the existing-table workflow unless the user explicitly asks for a new table or a search workflow
+- when a task URL is present, default to the Deep Search task workflow unless the user explicitly asks to start a new search task
+
+Example:
+
+User request:
+
+```text
+Add a funding column to http://app.extruct.ai/tables/0a1a669a-9a40-497c-bb00-d49dd8ee5b74
+```
+
+Resulting table id:
+
+```text
+0a1a669a-9a40-497c-bb00-d49dd8ee5b74
+```
+
+First CLI reads:
+
+```bash
+<extruct_api_cli> tables get 0a1a669a-9a40-497c-bb00-d49dd8ee5b74
+<extruct_api_cli> columns list 0a1a669a-9a40-497c-bb00-d49dd8ee5b74
+<extruct_api_cli> tables data 0a1a669a-9a40-497c-bb00-d49dd8ee5b74 --limit 20 --offset 0
+```
+
+User request:
+
+```text
+Check results for https://app.extruct.ai/tasks/d530c3ad-626c-4d7b-ab15-181d4058e4f8
+```
+
+Resulting task id:
+
+```text
+d530c3ad-626c-4d7b-ab15-181d4058e4f8
+```
+
+First CLI reads:
+
+```bash
+<extruct_api_cli> deep-search get d530c3ad-626c-4d7b-ab15-181d4058e4f8
+<extruct_api_cli> deep-search results d530c3ad-626c-4d7b-ab15-181d4058e4f8 --limit 20 --offset 0
+```
 
 ## Choose The Right Company-Finding Path
 
@@ -211,6 +269,8 @@ Use this when the user needs a new table before doing anything else.
 ```
 
 ### Inspect Before Mutating
+
+If the user supplied a table URL, extract the table id first and use that id for all CLI commands below.
 
 ```bash
 <extruct_api_cli> tables list --limit 20

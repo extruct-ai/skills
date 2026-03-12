@@ -221,22 +221,40 @@ Choose the output format that best matches the data you want Extruct to return l
 
 Guidance:
 
+- use the simplest output format that preserves the business value of the answer
 - use `text` for short prose meant to be read directly
 - use `select` or `multiselect` when the answer should be constrained to labels
+- use `numeric`, `money`, `date`, `url`, `email`, or `phone` when the answer is a single typed value
 - use `money` for revenue, ARR, valuation, or funding
 - use `grade` for bounded scoring rubrics
-- use the simplest format that captures the business value of the answer
+- prefer separate columns when fields will be filtered, sorted, exported, or automated independently
 - Extruct already returns sources and explanation outside the answer; do not duplicate that wrapper metadata inside `output_schema`
-- do not add provenance fields such as `sources`, `source_url`, `evidence_url`, `notes`, `reasoning`, or `why` unless the user explicitly wants those as first-class table data
+- do not add provenance-only fields such as `sources`, `source_url`, `evidence_url`, `reasoning`, `why`, or `notes` unless those fields are themselves durable business outputs the user wants to keep in the table
 - prefer `select` for bounded classifications even when you also want justification; Extruct's response metadata already carries the supporting explanation
-- use `json` only when the answer itself is genuinely multi-field or repeating domain data that must live in the table, such as a competitors array, launches list, or product catalog slice
+- use `json` when the user wants one structured answer with multiple fields that naturally belong together in one cell, such as status plus supporting URL, a competitors array, structured social profiles, launches list, or a product catalog slice
 
 Anti-pattern:
 
 - do not model a bounded decision as `json` just to carry evidence alongside it
 - bad fit: remote hiring as `{status, evidence_url, notes}`
 - better fit: `remote_hiring_status` as `select` with labels such as `yes`, `no`, `mixed`, `unclear`
-- if downstream workflows truly need a first-class URL or another separate field, add that as its own column instead of packing it into the same `json` answer
+- if the user wants one compact structured answer, a small `json` object is fine
+- if downstream workflows need each field to be independently filterable, sortable, exportable, or automatable, split them into separate columns
+
+Good fit for `json`:
+
+- `remote_hiring_status` plus `careers_page_url` in one structured answer
+- a competitors array with per-competitor fields such as `name`, `domain`, and `short_reason`
+- structured social profiles that naturally belong together in one answer
+- a product catalog slice or launch list with repeated items
+
+Rule of thumb:
+
+- one bounded label -> `select`
+- one typed scalar -> typed non-`json` format
+- a few fields that the user wants as one cohesive answer -> `json`
+- several independently reusable fields -> separate columns
+- one nested object or repeating list -> `json`
 
 If you set `output_format` to `json`, `output_schema` is required.
 
@@ -284,9 +302,10 @@ Good prompts are:
 Prompt-design rule:
 
 - ask Extruct for the business answer, not for duplicated provenance
-- do not ask the model to return URLs, notes, source lists, or reasoning inside the answer just because they help justify the answer; Extruct already returns sources and explanation outside the answer
-- if the user needs both a classification and a durable field for automation or export, split that into separate columns
-- prefer one bounded output per column over one `json` blob that mixes classification, evidence, and commentary
+- do not ask the model to return URLs, notes, source lists, or reasoning inside the answer just to justify the answer; Extruct already returns sources and explanation outside the answer
+- if explanatory text is itself the business output, it is fine to store it explicitly
+- if the user wants one compact structured answer, a small `json` object is fine; split into separate columns only when the fields need to be used independently downstream
+- prefer one bounded output per column unless the user explicitly wants one cohesive multi-field answer
 
 Research prompt pattern:
 
@@ -313,6 +332,16 @@ yes, no, mixed, unclear.
 Return the label only.
 ```
 
+Split-column pattern:
+
+```text
+Classify the company's remote hiring status into exactly one option:
+yes, no, mixed, unclear.
+Return the label only.
+```
+
+If the user also wants the careers page URL in the same answer, returning a small `json` object is fine. Split it into separate columns only when the status and URL need to be used independently downstream.
+
 Competitor discovery pattern:
 
 ```text
@@ -321,6 +350,48 @@ Prefer companies that solve the same core problem for a similar buyer.
 Return one object with a competitors array.
 Each competitor should include name, domain, and short_reason.
 If you are not confident a company is a real competitor, leave it out.
+```
+
+Bad JSON vs better typed-columns example:
+
+Bad fit:
+
+```json
+{
+  "status": "mixed",
+  "evidence_url": "https://company.example/careers",
+  "notes": "Some roles are remote-friendly."
+}
+```
+
+Better split when the fields need to be used independently:
+
+```text
+remote_hiring_status -> select
+careers_page_url -> url
+```
+
+Compact JSON example for one combined answer:
+
+```json
+{
+  "remote_hiring_status": "mixed",
+  "careers_page_url": "https://company.example/careers"
+}
+```
+
+Good JSON example:
+
+```json
+{
+  "competitors": [
+    {
+      "name": "Ramp",
+      "domain": "ramp.com",
+      "short_reason": "Targets the same finance automation buyer."
+    }
+  ]
+}
 ```
 
 ## Troubleshooting
