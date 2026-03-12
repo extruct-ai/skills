@@ -1,31 +1,31 @@
-# Extruct AI Skills
+# Extruct API Skill
 
-Official Extruct AI skills for coding agents.
+Give coding agents a structured way to search, enrich, and operate Extruct workflows.
 
-This repository packages Extruct AI workflows as [Agent Skills](https://agentskills.io/) so agents can use Extruct for company discovery, semantic search, lookalike search, Deep Search, AI Tables, enrichment, and people/contact workflows.
+This skill helps agents use Extruct for company discovery, Deep Search, lookalike search, AI Tables, enrichment, and contact-finding without relying on ad hoc prompts.
 
-It also serves as a Claude Code plugin marketplace via `.claude-plugin/marketplace.json`.
-For Codex, skills can also include `agents/openai.yaml` for native display metadata; `extruct-api` includes that file.
+## Overview
 
-## What This Skill Does
-
-`extruct-api` helps agents operate Extruct AI through a bundled CLI wrapper.
-
-It is designed for:
-- company discovery with semantic search, lookalike search, and Deep Search
-- company and people table workflows
-- enrichment, scoring, and contact-finding operations
-- inspecting, updating, polling, and reading existing Extruct tasks and tables
+Use it when you want an agent to:
+- discover companies with semantic search, lookalike search, or Deep Search
+- build and update company or people tables
+- enrich rows, add columns, score records, and inspect task progress
+- find people at companies and retrieve contact data
 
 Typical prompts:
-- "search Extruct for AI procurement startups"
-- "find companies similar to Ramp in Extruct"
-- "create an Extruct table for target accounts and enrich it"
-- "find decision makers at these companies in Extruct"
+- "Help me integrate the Extruct API into this codebase."
+- "Research the competitive landscape around vercel.com using Extruct."
+- "Give me an overview of my Extruct AI workspace."
+- "Search Extruct for AI procurement startups."
+- "Find companies similar to Ramp in Extruct."
+- "Create an Extruct table for target accounts and enrich it."
+- "Find decision makers at these companies in Extruct."
 
-## Setup
+## Prerequisites
 
 The bundled CLI requires an Extruct API token.
+
+Get one from the [Extruct dashboard](https://app.extruct.ai/api-tokens).
 
 Set:
 
@@ -33,17 +33,13 @@ Set:
 export EXTRUCT_API_TOKEN=your_token_here
 ```
 
-Before first use, the skill typically checks access with:
+## Install
+
+### Vercel Skills CLI
 
 ```bash
-/absolute/path/to/extruct-api/scripts/extruct-api auth user
+npx skills add extruct-ai/skills
 ```
-
-If authentication or behavior is unclear, the official Extruct API reference is the source of truth:
-
-- [Extruct API reference](https://www.extruct.ai/docs/api-reference/introduction)
-
-## Install
 
 ### Claude Code
 
@@ -64,25 +60,23 @@ Codex will discover the skill from `.agents/skills/` and can use the bundled `ag
 
 You can also install from GitHub with Codex's `$skill-installer` once the repository is public.
 
-## Available Skills
+## How It Works
+
+Once installed, the skill gives the agent a structured path for common Extruct workflows instead of relying on ad hoc prompts. It helps the agent choose the right Extruct path, construct valid requests, inspect existing tasks and tables before mutating them, and carry async work through to completion.
+
+The skill uses the same `EXTRUCT_API_TOKEN` as the API examples in the Extruct docs and treats the public Extruct API contract as the source of truth.
+
+## What You Can Do
+
+- Run Semantic Search, Lookalike Search, and Deep Search
+- Help agents build against the Extruct API with the right workflow and payload shape
+- Create, inspect, update, run, and read Extruct tables
+- Add enrichment, scoring, and contact-finding workflows to existing tables
+- Poll long-running tasks and return results in a consistent shape
+
+## Available Skill
 
 ### `extruct-api`
-
-Run explicit Extruct API tasks through the bundled Extruct CLI. Covers Deep Search, semantic search, lookalike search, company and people tables, column operations, enrichment, and contact finding.
-
-## Repository Structure
-
-```text
-.claude-plugin/
-  marketplace.json
-skills/
-  extruct-api/
-    SKILL.md
-    agents/
-    scripts/
-    assets/
-    references/
-```
 
 ## Contributing
 
@@ -98,6 +92,12 @@ python -m py_compile skills/extruct-api/scripts/extruct-api
 ```
 
 A GitHub Action runs the same checks on pushes and pull requests.
+
+## Resources
+
+- [Extruct API skill docs](https://www.extruct.ai/docs/build-with-ai-agents/extruct-api-skill)
+- [Extruct API reference](https://www.extruct.ai/docs/api-reference/introduction)
+- [Agent Skills](https://agentskills.io/)
 
 ## License
 
