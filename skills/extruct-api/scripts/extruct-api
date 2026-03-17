@@ -464,7 +464,7 @@ def _table_is_idle(payload: Any) -> bool:
 def _deep_search_is_complete(payload: Any) -> bool:
     if not isinstance(payload, dict):
         return False
-    return payload.get("status") == "done" or payload.get("is_exhausted") is True
+    return payload.get("status") in ("done", "failed")
 
 
 def _validate_payload_object(payload: Any, *, path: str) -> tuple[Any | None, int]:
@@ -859,7 +859,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     deep_search_poll = deep_search_actions.add_parser(
         "poll",
-        help="Poll a Deep Search task until status=done or is_exhausted=true.",
+        help="Poll a Deep Search task until status=done or status=failed.",
         parents=[global_options],
     )
     deep_search_poll.add_argument("task_id")

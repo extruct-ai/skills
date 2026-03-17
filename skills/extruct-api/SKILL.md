@@ -231,10 +231,27 @@ Inspect, poll, read results, or request more:
 <extruct_api_cli> deep-search resume <task_id> --payload '{"desired_new_results":25}'
 ```
 
+Deep Search pipeline:
+
+A task progresses through four stages, each tracked by a counter on the task object:
+
+1. **Discovery** (`num_results_discovered`) — candidates are gathered from data sources
+2. **Enrichment** (`num_results_enriched`) — candidates are filtered for relevance and enhanced with company profiles
+3. **Evaluation** (`num_results_evaluated`) — enriched candidates are scored against criteria
+4. **Qualification** (`num_results`) — evaluated candidates that meet the fit threshold become final results
+
+`is_exhausted` means the candidate pool is depleted (enrichment has caught up with discovery). It does **not** mean the task is done — evaluation and qualification continue after `is_exhausted` becomes true. A task can be `is_exhausted: true` + `status: "in_progress"` for a significant period while the remaining candidates are scored.
+
+`status` is the only reliable completion indicator:
+- `done` — task completed successfully
+- `failed` — task did not complete (inspect error details)
+
+`deep-search poll` blocks until `status` reaches `done` or `failed`.
+
 Deep Search notes:
 
 - `deep-search results` can be read while the task is still running
-- `deep-search poll` completes when `status == "done"` or `is_exhausted == true`
+- `is_exhausted: true` means resume will fail (no more candidates to discover) — to get more results, create a new task
 - if the user wants follow-on enrichment, move shortlisted domains into a company table
 - if the payload spans more than a few lines or includes `criteria`, prefer `--payload-file` over inline `--payload`
 
