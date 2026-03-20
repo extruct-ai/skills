@@ -27,12 +27,15 @@ DEFAULT_BASE_URL = "https://api.extruct.ai"
 DEFAULT_TIMEOUT_SECONDS = 30
 DEFAULT_LIST_OFFSET = 0
 DEFAULT_LIST_LIMIT = 20
+DEFAULT_TABLES_LIST_LIMIT = 50
+MAX_TABLES_LIST_LIMIT = 100
 DEFAULT_TABLE_DATA_LIMIT = 50
 DEFAULT_POLL_INTERVAL_SECONDS = 5.0
 DEFAULT_POLL_MAX_ATTEMPTS = 60
 DEFAULT_DEEP_SEARCH_RESULTS_LIMIT = 50
 DEFAULT_DEEP_SEARCH_POLL_INTERVAL_SECONDS = 10.0
 DEFAULT_DEEP_SEARCH_POLL_MAX_ATTEMPTS = 120
+ALLOWED_TABLE_SORT_VALUES = ("-created_at", "created_at", "name", "-name", "num_rows", "-num_rows")
 
 EXIT_SUCCESS = 0
 EXIT_REQUEST_FAILURE = 1
@@ -59,6 +62,20 @@ def _json_print(payload: Any, pretty: bool) -> None:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return
     print(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+
+
+def _normalize_argv(argv: list[str]) -> list[str]:
+    normalized: list[str] = []
+    i = 0
+    while i < len(argv):
+        current = argv[i]
+        if current == "--sort" and i + 1 < len(argv) and argv[i + 1] in ALLOWED_TABLE_SORT_VALUES:
+            normalized.append(f"--sort={argv[i + 1]}")
+            i += 2
+            continue
+        normalized.append(current)
+        i += 1
+    return normalized
 
 
 def _error_payload(
@@ -738,10 +755,21 @@ def _build_parser() -> argparse.ArgumentParser:
 
     tables_list = tables_actions.add_parser("list", help="List tables.", parents=[global_options])
     tables_list.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
-    tables_list.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
-    tables_list.add_argument("--view", choices=("full", "minimal"))
+    tables_list.add_argument("--limit", type=int, default=DEFAULT_TABLES_LIST_LIMIT)
     tables_list.add_argument("--kind", choices=("generic", "company", "people"))
     tables_list.add_argument("--scope", choices=("personal", "organization"))
+    tables_list.add_argument("--search", help="Filter tables by name or description text.")
+    tables_list.add_argument(
+        "--tags",
+        action="append",
+        default=None,
+        help="Filter by tag. Repeat the flag to match any of multiple tags.",
+    )
+    tables_list.add_argument(
+        "--sort",
+        choices=ALLOWED_TABLE_SORT_VALUES,
+        help="Sort table results.",
+    )
 
     tables_create = tables_actions.add_parser("create", help="Create a table.", parents=[global_options])
     _add_payload_args(tables_create)
@@ -1021,16 +1049,28 @@ def _handle_tables(args: argparse.Namespace) -> int:
         if pagination_error is not None:
             _json_print(pagination_error, args.pretty)
             return pagination_error_code
+        if args.limit > MAX_TABLES_LIST_LIMIT:
+            limit_error, limit_error_code = _cli_error(
+                message=f"Invalid --limit: value must be <= {MAX_TABLES_LIST_LIMIT}.",
+                path=path,
+                details={"limit": args.limit},
+            )
+            _json_print(limit_error, args.pretty)
+            return limit_error_code
         query = {
             "offset": args.offset,
             "limit": args.limit,
         }
-        if args.view is not None:
-            query["view"] = args.view
         if args.kind is not None:
             query["kind"] = args.kind
         if args.scope is not None:
             query["scope"] = args.scope
+        if args.search is not None:
+            query["search"] = args.search
+        if args.tags is not None:
+            query["tags"] = args.tags
+        if args.sort is not None:
+            query["sort"] = args.sort
         return _execute_request(args, method=method, path=path, query=query)
 
     if args.action == "create":
@@ -1377,7 +1417,7 @@ def _handle_deep_search(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = _build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(_normalize_argv(sys.argv[1:]))
 
     try:
         if args.resource == "auth":

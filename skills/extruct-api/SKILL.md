@@ -291,12 +291,24 @@ If the user supplied a table URL, extract the table id first and use that id for
 
 ```bash
 <extruct_api_cli> tables list --limit 20
+<extruct_api_cli> tables list --scope organization --search acme --tags portfolio --tags priority --sort -num_rows --limit 20 --offset 0
 <extruct_api_cli> tables get <table_id>
 <extruct_api_cli> columns list <table_id>
 <extruct_api_cli> tables data <table_id> --limit 20 --offset 0
 <extruct_api_cli> tables data <table_id> --limit 20 --offset 0 --columns company_name,company_website
 <extruct_api_cli> rows get <table_id> <row_id>
 ```
+
+`tables list` notes:
+
+- the API returns root tables only
+- `--scope personal` is a subset of `--scope organization`
+- `--scope organization` includes the caller's tables plus other users' tables in the same organization
+- `--search` filters by text
+- repeat `--tags` to match any selected tag
+- `--sort` supports `-created_at`, `created_at`, `name`, `-name`, `num_rows`, and `-num_rows`
+- put `--sort` after `list`; use either `--sort -num_rows` or `--sort=-num_rows`
+- the API default limit is `50`; requests above `100` are invalid
 
 ### Update, Clone, Or Delete A Table
 
@@ -689,7 +701,7 @@ Check that:
 - `--pretty` for human-readable JSON
 - `--timeout <seconds>` to override request timeout
 - `--base-url <url>` to override the API base URL
-- these flags can be placed before the resource, after the resource, or after the final action; for example: `<extruct_api_cli> tables list --limit 20 --pretty`
+- only these global flags can be placed before the resource, after the resource, or after the final action; resource-specific flags such as `tables list --sort` must stay with that action
 
 ## References
 
