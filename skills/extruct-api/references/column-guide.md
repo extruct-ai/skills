@@ -34,6 +34,7 @@ Many column mistakes come from doing this in reverse.
 Before you add or run columns:
 
 - confirm the table kind, row count, and existing columns
+- on `company` tables, inspect `company_profile` before adding duplicate firmographic columns
 - prefer built-in column kinds before designing custom prompts
 - add only the columns you actually need
 - run only the new column ids when iterating
@@ -153,6 +154,33 @@ Important people-table rule:
 - `company_website`
 
 You usually should not create those manually.
+
+`company_profile` is not just another text field. Treat it as the default source for slow-moving company firmographics before adding more columns.
+
+In practice, `company_profile` often already includes structured fields under `context`, such as:
+
+- descriptive fields like `short_description`, `full_description`, `products_services`, `use_cases`, and `target_audience`
+- firmographics like `founding_year`, `employee_count`, `hq_country`, `hq_state_province`, `hq_city`, and `hq_full_address`
+- social/profile URLs in `social_profiles`, such as LinkedIn, X, GitHub, YouTube, and Crunchbase
+- supporting `sources`
+
+The most common duplicate-column mistakes on `company` tables are:
+
+- `founding_year`
+- `employee_count`
+- HQ fields such as `hq_country`, `hq_state_province`, `hq_city`, and `hq_full_address`
+
+Default rule:
+
+- inspect `company_profile` on a small sample of rows first
+- if the needed firmographic value is already present directly in the profile, do not add a new research column just to restate it
+- if the table needs that value in a specific typed or normalized shape, prefer a small `llm` extraction or classification column
+
+Different rule for freshness-sensitive facts:
+
+- funding, revenue, pricing, and recent news often still justify dedicated columns
+- even if `company_profile` contains some of that information, it may be stale or not structured the way the user needs
+- use `research_pro` when the user wants a fresh or purpose-built answer for those fields
 
 ### `company_people_finder`
 
@@ -287,6 +315,8 @@ What this means:
 - on `company` and `people` tables, most prompts should be plain natural-language instructions with no variables
 - add explicit prompt references only when a column must read another custom column
 - on `generic` tables, explicit references are often the clearest choice
+- on `company` tables, if the answer is a slow-moving firmographic already present in `company_profile`, prefer an `llm` extraction or classification over a fresh `research_pro` refetch
+- if the user only needs the answer in the response and not as a reusable table field, read it directly from `company_profile` instead of creating any new column
 
 ### Prompt Writing Rules
 
@@ -454,7 +484,9 @@ If you are unsure:
 
 - default to `company` tables
 - default to built-in column kinds when available
-- default to `research_pro` for company facts
+- default to inspecting `company_profile` before adding slow-moving firmographic columns
+- default to deriving typed or customized outputs from `company_profile` with `llm` when the profile already contains the answer
+- default to `research_pro` for freshness-sensitive company research such as funding, revenue, pricing, and recent news
 - default to `llm` for downstream transformations
 - default to the simplest output format that preserves downstream value
 - default to `select` for bounded classifications
@@ -492,6 +524,7 @@ Notes before you copy:
 - on `company` and `people` tables, required columns are created automatically
 - on those tables, custom agent columns get baseline context injected automatically
 - most prompts on `company` and `people` tables should not mention `company_name`, `company_website`, `full_name`, `profile_url`, or `role` explicitly
+- many slow-moving company firmographics are already present in `company_profile`; prefer reading or deriving those first, and use the `research_pro` templates below more freely for freshness-sensitive research such as funding, revenue, pricing, and recent news
 - if a template below references another column, that dependency is intentional
 
 ### Company Research
@@ -1132,6 +1165,12 @@ Configured with `kind`, `name`, and `key` only. No `value` field is required.
 1. `linkedin_company_url`
 2. `linkedin_company_data`
 3. `linkedin_activity_summary`
+
+### Company Profile -> Extraction Or Classification
+
+1. inspect `company_profile`
+2. if needed, add an `llm` column that extracts or classifies the needed firmographic field from `{company_profile}`
+3. do not add a fresh `research_pro` column just to restate founding year, employee count, or HQ unless the user explicitly needs re-verification
 
 ### Research -> Classification
 

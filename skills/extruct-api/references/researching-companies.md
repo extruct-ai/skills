@@ -58,12 +58,19 @@ Inspect before mutating:
 <extruct_api_cli> tables get <table_id>
 <extruct_api_cli> columns list <table_id>
 <extruct_api_cli> tables data <table_id> --limit 20
-<extruct_api_cli> tables data <table_id> --limit 20 --columns company_name,company_website
+<extruct_api_cli> tables data <table_id> --limit 20 --columns company_name,company_website,company_profile
 ```
 
 ### Add Columns
 
-Design columns from `column-guide.md`, then add them:
+Design columns from `column-guide.md`, then add them.
+
+Before adding columns, split the ask into two buckets:
+
+- slow-moving firmographics already present in `company_profile`: the common mistakes are `founding_year`, `employee_count`, and HQ fields; do not create fresh research columns for those when the profile already has them
+- freshness-sensitive research: funding, revenue, pricing, and recent news often still deserve dedicated columns even if the profile contains partial answers
+- if the answer is already a direct profile field and the user only needs it in the response, read it directly instead of creating any column
+- if the table needs an existing profile value as a reusable typed field, prefer a small `llm` extraction or classification column over a fresh research column
 
 ```bash
 <extruct_api_cli> columns add <table_id> --payload '{ "column_configs":[ ... ] }'
@@ -82,12 +89,14 @@ Design columns from `column-guide.md`, then add them:
 ### Read Results
 
 ```bash
-<extruct_api_cli> tables data <table_id> --limit 20 --offset 0 --columns company_name,latest_funding
+<extruct_api_cli> tables data <table_id> --limit 20 --offset 0 --columns company_name,expansion_signals
 ```
 
 ## Safe Iteration Rules
 
 - prefer built-in company columns before custom prompts
+- prefer the built-in `company_profile` over new columns for slow-moving firmographics such as founding year, employee count, and HQ
+- be more willing to add dedicated columns for freshness-sensitive research such as funding, revenue, pricing, and recent news
 - add a small number of new columns at a time
 - use `mode: "new"` and explicit column ids for incremental work
 - inspect a small result page before adding more layers, and project only the fields the user asked about
@@ -95,6 +104,9 @@ Design columns from `column-guide.md`, then add them:
 
 ## What To Inspect
 
+- whether the requested datapoint is already covered well enough by `company_profile`
+- whether the answer is one of the common profile-backed firmographics such as `founding_year`, `employee_count`, `hq_country`, `hq_state_province`, `hq_city`, or `hq_full_address`
+- whether the ask is actually freshness-sensitive research, in which case a dedicated column may still be the right move
 - whether each column answers one clear question
 - whether output formats are structured enough for downstream use
 - whether `Not found` behavior is acceptable

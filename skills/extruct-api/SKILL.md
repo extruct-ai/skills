@@ -47,7 +47,7 @@ This section covers the default operating intent of the skill: identify the Extr
    - existing table operation: inspect, add/update rows or columns, run, poll, read
    - company-table workflow: enrich or score companies in a reusable table
    - people workflow: find people at companies or enrich existing people rows
-3. If the user already has a table or task, inspect it before mutating it. Default inspection is `tables get`, `columns list`, and a small `tables data` page. When you only need a surgical read, add `--columns` on the first `tables data` call instead of fetching the full row payload.
+3. If the user already has a table or task, inspect it before mutating it. Default inspection is `tables get`, `columns list`, and a small `tables data` page. On `company` tables, inspect `company_profile` on the first read before adding standard company-fact columns. When you only need a surgical read, add `--columns` on the first `tables data` call instead of fetching the full row payload.
 4. Start from the inline command and payload examples in this file. If a payload spans more than a few lines, prefer `--payload-file`. Read `references/column-guide.md` before designing or changing columns.
 5. Carry async work through to completion with `tables poll` or `deep-search poll`, then summarize the final result or API error in plain language, including IDs, counts, and the next relevant object when it matters.
 
@@ -384,20 +384,22 @@ Row-deletion notes:
 
 Read `references/column-guide.md` before designing or changing columns. Prefer built-in column kinds before custom prompts.
 
+On `company` tables, inspect `company_profile` before creating duplicate firmographic columns. The most common mistakes are adding columns for founding year, employee count, and HQ fields even though those are usually already present in the profile. Reuse those profile values unless the user needs a typed extraction, normalization, or another derived field. Freshness-sensitive research such as funding, revenue, pricing, or recent news can still justify dedicated columns.
+
 If a column kind, payload field, or validation rule in this skill looks stale, verify the current table and column contract in the official API reference before retrying.
 
-Add a simple research column:
+Add a custom research column:
 
 ```bash
 <extruct_api_cli> columns add <table_id> --payload '{
   "column_configs":[
     {
       "kind":"agent",
-      "name":"Latest Funding",
-      "key":"latest_funding",
+      "name":"Expansion Signals",
+      "key":"expansion_signals",
       "value":{
         "agent_type":"research_pro",
-        "prompt":"What is the latest funding round for the company? Return round type, amount, date, and lead investors when available.",
+        "prompt":"Identify and summarize the company's expansion signals using job postings, press releases, new office mentions, executive hires, and product launches. Focus on geographic, product, or market expansion. Return a short evidence-dense summary with dates when available.",
         "output_format":"text"
       }
     }
@@ -410,11 +412,11 @@ Update a column:
 ```bash
 <extruct_api_cli> columns update <table_id> <column_id> --payload '{
   "kind":"agent",
-  "name":"Latest Funding",
-  "key":"latest_funding",
+  "name":"Expansion Signals",
+  "key":"expansion_signals",
   "value":{
     "agent_type":"research_pro",
-    "prompt":"What is the latest funding round for the company? Return round type, amount, date, and lead investors when available.",
+    "prompt":"Identify and summarize the company's expansion signals using job postings, press releases, new office mentions, executive hires, and product launches. Focus on geographic, product, or market expansion. Return a short evidence-dense summary with dates when available.",
     "output_format":"text"
   }
 }'
@@ -444,7 +446,7 @@ Poll and then read a small result page:
 ```bash
 <extruct_api_cli> tables poll <table_id>
 <extruct_api_cli> tables data <table_id> --limit 20 --offset 0
-<extruct_api_cli> tables data <table_id> --limit 20 --offset 0 --columns company_name,latest_funding
+<extruct_api_cli> tables data <table_id> --limit 20 --offset 0 --columns company_name,expansion_signals
 ```
 
 Table-operation defaults:
@@ -477,8 +479,12 @@ Use company tables when the user wants custom enrichment over a set of companies
 Company table notes:
 
 - `company` tables automatically include `input`, `company_profile`, `company_name`, and `company_website`
+- `company_profile` commonly already contains descriptions, product/use-case summaries, founding year, employee count, HQ fields, social profile URLs, and supporting sources
 - use domains or URLs as row inputs whenever possible
 - built-in company columns usually remove the need to create basic identity fields yourself
+- the most common duplicate-column mistakes are `founding_year`, `employee_count`, and HQ fields such as `hq_country`, `hq_state_province`, `hq_city`, and `hq_full_address`
+- if those values already exist directly in `company_profile`, do not create another research column just to restate them; read them directly or extract them into a typed field if the table needs that shape
+- freshness-sensitive facts such as funding, revenue, pricing, and recent news are different: even when partially present in `company_profile`, it often still makes sense to create dedicated columns because the user usually wants fresher or more structured outputs
 
 If the user needs a fresh company table, create one:
 
