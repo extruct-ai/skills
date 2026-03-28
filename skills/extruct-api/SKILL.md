@@ -39,7 +39,7 @@ Example:
 
 This section covers the default operating intent of the skill: identify the Extruct object the user is working with, choose the right execution path, inspect before mutating, and use the CLI to carry the task through to completion.
 
-1. Resolve `<extruct_api_cli>` first, then establish API access. Before the first authenticated CLI call in a conversation, run `<extruct_api_cli> auth user`. If it fails, run `<extruct_api_cli> healthcheck` to distinguish credential problems from connectivity issues.
+1. Resolve `<extruct_api_cli>` first, then establish account and billing context. Before the first authenticated CLI call in a conversation, run `<extruct_api_cli> auth user` to get the user and subscription snapshot. If it fails, run `<extruct_api_cli> healthcheck` to distinguish credential problems from connectivity issues.
 2. Classify the request into the right Extruct path:
    - if the user provides an Extruct table URL or a raw table UUID, treat it as an existing table operation first
    - if the user provides an Extruct task URL or a raw task UUID, treat it as an existing Deep Search task first
@@ -54,6 +54,36 @@ This section covers the default operating intent of the skill: identify the Extr
 If any request shape, field name, response contract, or endpoint capability is uncertain while executing this workflow, re-check the official API reference before proceeding:
 
 - https://www.extruct.ai/docs/api-reference/introduction
+
+## Plan Access Preflight For Pro-Only Actions
+
+Deep Search mutations and table mutations are Pro-gated unless bypassed by manual or organization access.
+
+Before the first Pro-only action in a conversation, run:
+
+```bash
+<extruct_api_cli> auth user
+```
+
+Use the response fields:
+
+- `subscription.requires_subscription`
+- `subscription.plan_tier`
+- `user.organization_id`
+- `user.organization_is_active`
+
+Treat access as allowed if any of these conditions is true:
+
+- `subscription.requires_subscription == false`
+- `subscription.plan_tier` is `pro` or `legacy`
+- `user.organization_id` is present and `user.organization_is_active == true`
+
+If none of those conditions is true, stop before running Pro-only commands and tell the user the feature requires Pro.
+
+Pro-only actions in this skill:
+
+- Deep Search mutations: `deep-search create`, `deep-search resume`, `deep-search pause`
+- Table mutations: `tables create`, `tables update`, `tables delete`, `tables clone`, `tables run`, `rows create`, `rows update`, `rows delete`, `columns add`, `columns update`, `columns delete`
 
 ## Resolve Extruct Identifiers
 
@@ -183,6 +213,8 @@ If identifier handling is unclear for a specific seed company or the live API be
 
 Use Deep Search when the user wants a higher-precision asynchronous company search, wants explicit criteria, or is comfortable waiting for a task.
 
+Deep Search mutations (`create`, `resume`, `pause`) are Pro-gated. Run the plan-access preflight before those commands.
+
 Typical asks:
 
 - "run Deep Search for B2B revenue intelligence vendors"
@@ -262,6 +294,8 @@ Read `references/finding-companies.md` when the task is a fuller company-discove
 ## Operate Existing Tables
 
 Use these commands when the user already has a table and wants to inspect it, change rows or columns, run new work, or read results.
+
+Table mutations are Pro-gated. Run the plan-access preflight before create, edit, delete, clone, run, row mutation, or column mutation commands.
 
 Typical asks:
 
@@ -642,6 +676,8 @@ Run:
 <extruct_api_cli> healthcheck
 ```
 
+`auth user` should return both `user` and `subscription` objects.
+
 If `auth user` fails, the token or account context is wrong. If `healthcheck` fails too, treat it as connectivity or service health.
 
 If the auth flow, expected status codes, or healthcheck contract has changed, defer to the official API reference.
@@ -696,6 +732,12 @@ Check that:
 - use `select`, `multiselect`, `numeric`, `money`, `date`, `grade`, or `json` instead of defaulting to `text`
 - use the simplest format that captures the business value; do not pack Extruct explanation or source metadata into `json` unless the user explicitly wants those fields as table data
 - derive downstream classifications with `llm` after researching the source fact once
+
+### Plan Or Billing Gates (402)
+
+- if the CLI returns `402` with `detail.error = "plan_required"`, explain that the action requires Pro and do not blind-retry
+- if the CLI returns `402` with `detail.error = "payment_failed"`, explain payment recovery is required before paid features can run
+- if the CLI returns `402` with `detail.error = "insufficient_credits"`, treat it as billing/quota and guide the user to top up or wait for reset
 
 ### Retry Behavior
 

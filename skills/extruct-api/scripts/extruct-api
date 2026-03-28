@@ -899,7 +899,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _auth_method_path(action: str) -> tuple[str, str]:
     if action == "user":
-        return "GET", "/v1/user"
+        return "GET", "/v1/billing"
     raise ValueError(f"Unsupported auth action: {action}")
 
 
