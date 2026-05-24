@@ -43,6 +43,7 @@ This section covers the default operating intent of the skill: identify the Extr
 2. Classify the request into the right Extruct path:
    - if the user provides an Extruct table URL or a raw table UUID, treat it as an existing table operation first
    - if the user provides an Extruct task URL or a raw task UUID, treat it as an existing Deep Search task first
+   - known company lookup: fetch the canonical company profile for one domain or UUID
    - company discovery: semantic search, lookalike search, or Deep Search
    - existing table operation: inspect, add/update rows or columns, run, poll, read
    - company-table workflow: enrich or score companies in a reusable table
@@ -189,7 +190,7 @@ If search filters or pagination behavior appear different from the guidance here
 
 ### Lookalike Search
 
-Use lookalike search when the user already has a reference company and wants similar companies. Prefer domains or URLs for `--company-identifier` unless a prior Extruct response already gives you a UUID.
+Use lookalike search when the user already has a reference company and wants similar companies. Prefer domains for `--company-identifier` unless a prior Extruct response already gives you a UUID.
 
 Typical asks:
 
@@ -208,6 +209,30 @@ Commands:
 Pagination uses the same `--offset` and `--limit` behavior as semantic search.
 
 If identifier handling is unclear for a specific seed company or the live API behavior differs, verify the current lookalike-search request contract in the official API reference.
+
+### Company Lookup
+
+Use company lookup when the user has one known company and wants its full canonical Extruct company profile. This is not a discovery tool.
+
+Use lookup for:
+
+- "pull up Stripe's profile"
+- "get the Extruct profile for ramp.com"
+- "fetch details for this company profile UUID"
+
+Do not use lookup when:
+
+- the user describes a category or market — use semantic search
+- the user asks for similar companies — use lookalike search
+- the user wants a scored shortlist — use Deep Search
+
+Command:
+
+```bash
+<extruct_api_cli> companies lookup --company-identifier stripe.com
+```
+
+`--company-identifier` accepts a domain or Extruct company profile UUID. The response returns `id`, `domain`, `company_name`, and the rich company profile in `context`. Company lookup currently consumes 0 credits, but successful and accepted lookups may appear in usage analytics.
 
 ### Deep Search
 
@@ -690,7 +715,7 @@ If the auth flow, expected status codes, or healthcheck contract has changed, de
 
 ### Lookalike Results Feel Wrong
 
-- use a domain or URL instead of a company name when possible
+- use a domain or UUID instead of a company name when possible
 - confirm the seed company is the correct one before judging the output
 
 ### Column Creation Fails
