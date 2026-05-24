@@ -8,6 +8,7 @@ All commands below use `<extruct_api_cli>` as shorthand for the resolved absolut
 
 Use this playbook when the user asks for:
 
+- a full profile for one known company
 - semantic company discovery from a natural-language query
 - similar companies from a known seed company
 - a higher-precision asynchronous search with explicit criteria
@@ -19,6 +20,15 @@ Do not use this playbook when:
 - the user wants people rather than companies
 
 ## Choose The Right Search Path
+
+### Use Company Lookup
+
+Use `companies lookup` when the user has a known company and wants its full canonical Extruct profile. This accepts a domain or Extruct company profile UUID.
+Company lookup currently consumes 0 credits, but successful and accepted lookups may appear in usage analytics.
+
+```bash
+<extruct_api_cli> companies lookup --company-identifier stripe.com
+```
 
 ### Use Semantic Search
 
@@ -40,7 +50,7 @@ Add `--filters` when the user specifies geography, size, city, or founded range:
 
 Use `companies similar` when the user already knows a reference company.
 
-- prefer a domain or URL as `--company-identifier`
+- prefer a domain as `--company-identifier`
 - use a UUID only when a prior Extruct response already gives you one
 
 ```bash

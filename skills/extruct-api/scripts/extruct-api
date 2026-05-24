@@ -750,6 +750,17 @@ def _build_parser() -> argparse.ArgumentParser:
     companies_similar.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
     companies_similar.add_argument("--filters", help="Search filters JSON string.")
 
+    companies_lookup = companies_actions.add_parser(
+        "lookup",
+        help="Look up the full company profile for a known company domain or UUID.",
+        parents=[global_options],
+    )
+    companies_lookup.add_argument(
+        "--company-identifier",
+        required=True,
+        help="Company identifier (domain or UUID).",
+    )
+
     tables = resources.add_parser("tables", help="Table commands.", parents=[global_options])
     tables_actions = tables.add_subparsers(dest="action", required=True)
 
@@ -910,6 +921,11 @@ def _healthcheck_method_path() -> tuple[str, str]:
 def _companies_method_path(action: str, company_identifier: str | None = None) -> tuple[str, str]:
     if action == "search":
         return "GET", "/v1/companies/search"
+    if action == "lookup":
+        if company_identifier is None:
+            raise ValueError("company_identifier is required for lookup action.")
+        encoded_identifier = urllib.parse.quote(company_identifier, safe="")
+        return "GET", f"/v1/companies/{encoded_identifier}"
     if action == "similar":
         if company_identifier is None:
             raise ValueError("company_identifier is required for similar action.")
@@ -1009,6 +1025,16 @@ def _handle_companies(args: argparse.Namespace) -> int:
             _json_print(query_error, args.pretty)
             return query_error_code
         query_params["q"] = args.query
+    elif args.action == "lookup":
+        identifier_error, identifier_error_code = _validate_non_empty(
+            args.company_identifier,
+            flag="--company-identifier",
+            path="/v1/companies/{company_identifier}",
+        )
+        if identifier_error is not None:
+            _json_print(identifier_error, args.pretty)
+            return identifier_error_code
+        method, path = _companies_method_path("lookup", company_identifier=args.company_identifier)
     elif args.action == "similar":
         identifier_error, identifier_error_code = _validate_non_empty(
             args.company_identifier,
@@ -1023,6 +1049,9 @@ def _handle_companies(args: argparse.Namespace) -> int:
         error, code = _cli_error(message="Unsupported companies action.", path="/v1/companies")
         _json_print(error, args.pretty)
         return code
+
+    if args.action == "lookup":
+        return _execute_request(args, method=method, path=path)
 
     pagination_error, pagination_error_code = _validate_pagination(args.offset, args.limit, path=path)
     if pagination_error is not None:
