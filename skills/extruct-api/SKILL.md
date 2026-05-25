@@ -232,7 +232,7 @@ Command:
 <extruct_api_cli> companies lookup --company-identifier stripe.com
 ```
 
-`--company-identifier` accepts a domain or Extruct company profile UUID. The response returns `id`, `domain`, `company_name`, and the rich company profile in `context`. Company lookup currently consumes 0 credits, but successful and accepted lookups may appear in usage analytics.
+`--company-identifier` accepts a domain or Extruct company profile UUID. A ready profile response returns `id`, `domain`, `company_name`, and the rich company profile in `context`. If Extruct accepts the lookup and starts enrichment, the response has `status: "enriching"`, `domain`, and `message`; retry the same lookup later. Company lookup currently consumes 0 credits, but successful and accepted lookups may appear in usage analytics.
 
 ### Deep Search
 
