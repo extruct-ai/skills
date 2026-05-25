@@ -24,7 +24,7 @@ Do not use this playbook when:
 ### Use Company Lookup
 
 Use `companies lookup` when the user has a known company and wants its full canonical Extruct profile. This accepts a domain or Extruct company profile UUID.
-Company lookup currently consumes 0 credits, but successful and accepted lookups may appear in usage analytics.
+A ready profile response returns `id`, `domain`, `company_name`, and `context`. If Extruct accepts the lookup and starts enrichment, the response has `status: "enriching"`, `domain`, and `message`; retry the same lookup later. Company lookup currently consumes 0 credits, but successful and accepted lookups may appear in usage analytics.
 
 ```bash
 <extruct_api_cli> companies lookup --company-identifier stripe.com
