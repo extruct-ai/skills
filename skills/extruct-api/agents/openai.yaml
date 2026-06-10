@@ -1,6 +1,6 @@
 interface:
   display_name: "Extruct API"
-  short_description: "Company discovery, Deep Search, AI tables, enrichment, and people workflows"
+  short_description: "Company discovery, Deep Search, Deep Research, AI tables, enrichment, and people workflows"
   icon_small: "./assets/logo.svg"
   icon_large: "./assets/logo.svg"
   brand_color: "#4D56F3"

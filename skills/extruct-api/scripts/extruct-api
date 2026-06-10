@@ -35,6 +35,8 @@ DEFAULT_POLL_MAX_ATTEMPTS = 60
 DEFAULT_DEEP_SEARCH_RESULTS_LIMIT = 50
 DEFAULT_DEEP_SEARCH_POLL_INTERVAL_SECONDS = 10.0
 DEFAULT_DEEP_SEARCH_POLL_MAX_ATTEMPTS = 120
+DEFAULT_DEEP_RESEARCH_POLL_INTERVAL_SECONDS = 15.0
+DEFAULT_DEEP_RESEARCH_POLL_MAX_ATTEMPTS = 240
 ALLOWED_TABLE_SORT_VALUES = ("-created_at", "created_at", "name", "-name", "num_rows", "-num_rows")
 
 EXIT_SUCCESS = 0
@@ -484,6 +486,12 @@ def _deep_search_is_complete(payload: Any) -> bool:
     return payload.get("status") in ("done", "failed")
 
 
+def _deep_research_is_complete(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    return payload.get("status") in ("done", "failed")
+
+
 def _validate_payload_object(payload: Any, *, path: str) -> tuple[Any | None, int]:
     if isinstance(payload, dict):
         return None, EXIT_SUCCESS
@@ -491,6 +499,34 @@ def _validate_payload_object(payload: Any, *, path: str) -> tuple[Any | None, in
         message="Invalid payload: top-level JSON value must be an object.",
         path=path,
     )
+
+
+def _validate_deep_research_create_payload(payload: Any, *, path: str) -> tuple[Any | None, int]:
+    payload_error, payload_code = _validate_payload_object(payload, path=path)
+    if payload_error is not None:
+        return payload_error, payload_code
+
+    brief = payload.get("brief")
+    if not isinstance(brief, str) or not brief.strip():
+        return _cli_error(
+            message="Invalid payload: 'brief' is required and must be a non-empty string.",
+            path=path,
+        )
+
+    if "depth" in payload and payload["depth"] not in ("medium", "high", "xhigh"):
+        return _cli_error(
+            message="Invalid payload: 'depth' must be one of 'medium', 'high', 'xhigh'.",
+            path=path,
+        )
+
+    if "output_schema" in payload and payload["output_schema"] is not None:
+        if not isinstance(payload["output_schema"], dict):
+            return _cli_error(
+                message="Invalid payload: 'output_schema' must be a JSON Schema object.",
+                path=path,
+            )
+
+    return None, EXIT_SUCCESS
 
 
 def _validate_deep_search_create_payload(payload: Any, *, path: str) -> tuple[Any | None, int]:
@@ -905,6 +941,44 @@ def _build_parser() -> argparse.ArgumentParser:
     deep_search_poll.add_argument("--interval", type=float, default=DEFAULT_DEEP_SEARCH_POLL_INTERVAL_SECONDS)
     deep_search_poll.add_argument("--max-attempts", type=int, default=DEFAULT_DEEP_SEARCH_POLL_MAX_ATTEMPTS)
 
+    deep_research = resources.add_parser(
+        "deep-research",
+        help="Deep Company Research task commands. Tasks are asynchronous and produce one cited report.",
+        parents=[global_options],
+    )
+    deep_research_actions = deep_research.add_subparsers(dest="action", required=True)
+
+    deep_research_list = deep_research_actions.add_parser(
+        "list", help="List Deep Research tasks, newest first.", parents=[global_options]
+    )
+    deep_research_list.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
+    deep_research_list.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
+
+    deep_research_create = deep_research_actions.add_parser(
+        "create",
+        help="Create a Deep Research task. Requires payload with non-empty brief.",
+        parents=[global_options],
+    )
+    _add_payload_args(deep_research_create)
+
+    deep_research_get = deep_research_actions.add_parser(
+        "get", help="Get a Deep Research task.", parents=[global_options]
+    )
+    deep_research_get.add_argument("task_id")
+
+    deep_research_poll = deep_research_actions.add_parser(
+        "poll",
+        help="Poll a Deep Research task until status=done or status=failed.",
+        parents=[global_options],
+    )
+    deep_research_poll.add_argument("task_id")
+    deep_research_poll.add_argument(
+        "--interval", type=float, default=DEFAULT_DEEP_RESEARCH_POLL_INTERVAL_SECONDS
+    )
+    deep_research_poll.add_argument(
+        "--max-attempts", type=int, default=DEFAULT_DEEP_RESEARCH_POLL_MAX_ATTEMPTS
+    )
+
     return parser
 
 
@@ -1004,6 +1078,18 @@ def _deep_search_method_path(action: str, task_id: str | None = None) -> tuple[s
     if action == "poll":
         return "GET", f"/v1/discovery_tasks/{task_id}"
     raise ValueError(f"Unsupported deep-search action: {action}")
+
+
+def _deep_research_method_path(action: str, task_id: str | None = None) -> tuple[str, str]:
+    if action == "list":
+        return "GET", "/v1/deep_research_tasks"
+    if action == "create":
+        return "POST", "/v1/deep_research_tasks"
+    if task_id is None:
+        raise ValueError("task_id is required for this deep-research action.")
+    if action in ("get", "poll"):
+        return "GET", f"/v1/deep_research_tasks/{task_id}"
+    raise ValueError(f"Unsupported deep-research action: {action}")
 
 
 def _handle_auth(args: argparse.Namespace) -> int:
@@ -1444,6 +1530,95 @@ def _handle_deep_search(args: argparse.Namespace) -> int:
     return code
 
 
+def _handle_deep_research(args: argparse.Namespace) -> int:
+    if args.action == "list":
+        method, path = _deep_research_method_path("list")
+        pagination_error, pagination_error_code = _validate_pagination(args.offset, args.limit, path=path)
+        if pagination_error is not None:
+            _json_print(pagination_error, args.pretty)
+            return pagination_error_code
+        return _execute_request(
+            args,
+            method=method,
+            path=path,
+            query={"offset": args.offset, "limit": args.limit},
+        )
+
+    if args.action == "create":
+        method, path = _deep_research_method_path("create")
+        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+        if payload_error is not None:
+            _json_print(payload_error, args.pretty)
+            return payload_code
+        validation_error, validation_code = _validate_deep_research_create_payload(payload, path=path)
+        if validation_error is not None:
+            _json_print(validation_error, args.pretty)
+            return validation_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    task_error, task_code = _validate_non_empty(
+        args.task_id,
+        flag="task_id",
+        path="/v1/deep_research_tasks/{task_id}",
+    )
+    if task_error is not None:
+        _json_print(task_error, args.pretty)
+        return task_code
+
+    method, path = _deep_research_method_path(args.action, task_id=args.task_id)
+
+    if args.action == "get":
+        return _execute_request(args, method=method, path=path)
+
+    if args.action == "poll":
+        interval_error, interval_code = _validate_positive_number(args.interval, flag="--interval", path=path)
+        if interval_error is not None:
+            _json_print(interval_error, args.pretty)
+            return interval_code
+        attempts_error, attempts_code = _validate_positive_number(
+            args.max_attempts,
+            flag="--max-attempts",
+            path=path,
+        )
+        if attempts_error is not None:
+            _json_print(attempts_error, args.pretty)
+            return attempts_code
+
+        token, token_error, token_exit = _resolve_token(method=method, path=path)
+        if token is None:
+            _json_print(token_error, args.pretty)
+            return token_exit
+
+        for attempt in range(args.max_attempts):
+            response_payload, exit_code = _make_request(
+                base_url=args.base_url,
+                token=token,
+                method=method,
+                path=path,
+                timeout=args.timeout,
+            )
+            if exit_code != EXIT_SUCCESS:
+                _json_print(response_payload, args.pretty)
+                return exit_code
+            if _deep_research_is_complete(response_payload):
+                _json_print(response_payload, args.pretty)
+                return EXIT_SUCCESS
+            if attempt + 1 < args.max_attempts:
+                time.sleep(args.interval)
+
+        timeout_error, timeout_code = _cli_error(
+            message="Deep Research polling timed out before reaching a terminal state.",
+            path=path,
+            details={"max_attempts": args.max_attempts, "interval": args.interval},
+        )
+        _json_print(timeout_error, args.pretty)
+        return timeout_code
+
+    error, code = _cli_error(message="Unsupported deep-research action.", path="/v1/deep_research_tasks")
+    _json_print(error, args.pretty)
+    return code
+
+
 def main() -> int:
     parser = _build_parser()
     args = parser.parse_args(_normalize_argv(sys.argv[1:]))
@@ -1463,6 +1638,8 @@ def main() -> int:
             return _handle_columns(args)
         if args.resource == "deep-search":
             return _handle_deep_search(args)
+        if args.resource == "deep-research":
+            return _handle_deep_research(args)
 
         error, code = _cli_error(message="Unsupported resource.", path="/")
         _json_print(error, args.pretty)

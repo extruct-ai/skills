@@ -1,6 +1,6 @@
 ---
 name: extruct-api
-description: Run explicit Extruct API tasks through the bundled Extruct CLI. Covers Deep Search, semantic search, lookalike search, company and people tables, column operations, enrichment, and contact finding.
+description: Run explicit Extruct API tasks through the bundled Extruct CLI. Covers Deep Search, Deep Company Research, semantic search, lookalike search, company and people tables, column operations, enrichment, and contact finding.
 ---
 
 # Extruct API
@@ -45,6 +45,7 @@ This section covers the default operating intent of the skill: identify the Extr
    - if the user provides an Extruct task URL or a raw task UUID, treat it as an existing Deep Search task first
    - known company lookup: fetch the canonical company profile for one domain or UUID
    - company discovery: semantic search, lookalike search, or Deep Search
+   - company research report: Deep Company Research for a deep, cited report on one target
    - existing table operation: inspect, add/update rows or columns, run, poll, read
    - company-table workflow: enrich or score companies in a reusable table
    - people workflow: find people at companies or enrich existing people rows
@@ -84,6 +85,7 @@ If none of those conditions is true, stop before running Pro-only commands and t
 Pro-only actions in this skill:
 
 - Deep Search mutations: `deep-search create`, `deep-search resume`, `deep-search pause`
+- Deep Research mutations: `deep-research create`
 - Table mutations: `tables create`, `tables update`, `tables delete`, `tables clone`, `tables run`, `rows create`, `rows update`, `rows delete`, `columns add`, `columns update`, `columns delete`
 
 ## Resolve Extruct Identifiers
@@ -315,6 +317,71 @@ Deep Search notes:
 If Deep Search payload fields, task states, or resume behavior are unclear, verify them against the official API reference before constructing raw fallback requests.
 
 Read `references/finding-companies.md` when the task is a fuller company-discovery workflow instead of a single search command.
+
+### Deep Company Research
+
+Use Deep Research when the user wants a deep, cited report on one research target — account planning, buyer research, initiative summaries, diligence — rather than a list of companies. For discovering many companies, use Deep Search; for repeatable enrichment across a list, use tables.
+
+`deep-research create` is Pro-gated. Run the plan-access preflight before it.
+
+Typical asks:
+
+- "research Shell for me: buying centers, initiatives, sales angles"
+- "build an account plan brief for Stripe"
+- "do diligence on this company and give me a sourced report"
+
+Create a task (markdown report):
+
+```bash
+<extruct_api_cli> deep-research create --payload '{"brief":"Help me break into Shell. Find buying centers, recent initiatives, and practical sales angles.","depth":"medium"}'
+```
+
+Create a task with structured output (`--payload-file` preferred for schemas):
+
+```bash
+<extruct_api_cli> deep-research create --payload-file research.json
+```
+
+`research.json`:
+
+```json
+{
+  "brief": "Summarize Stripe's current enterprise initiatives for an account plan.",
+  "depth": "high",
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "summary": {"type": "string"},
+      "recommended_angles": {"type": "array", "items": {"type": "string"}},
+      "risks": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": ["summary", "recommended_angles", "risks"]
+  }
+}
+```
+
+Inspect, list, and wait for completion:
+
+```bash
+<extruct_api_cli> deep-research list --limit 20
+<extruct_api_cli> deep-research get <task_id>
+<extruct_api_cli> deep-research poll <task_id>
+```
+
+Depth and billing:
+
+- `depth` sets the research-agent budget: `medium` = 25, `high` = 50, `xhigh` = 75.
+- Creating a task requires the full budget in available credits; the user is billed only for agents that actually run (1 credit each). Failed tasks refund all charges.
+- If create returns `insufficient_credits` with `required_credits`/`available_credits`, a lower depth may still fit — offer it.
+
+Reading the result:
+
+- Tasks take minutes. `deep-research poll` blocks until `status` is `done` or `failed`; progress counters are `iterations`, `agents`, `sources`.
+- `report.kind` is `markdown` (citations like `[1]` resolve against `report.sources`) or `schema` (`fields` conforming to the output schema, `basis` mapping each field to supporting source ids, plus `sources`).
+- **Always surface `report.degradation_reasons` to the user** — plain-language notes when coverage was reduced (early finalization, failed research agents). Empty means a clean run.
+- On `failed`, read `failure_reason` and relay it: a rejected brief includes suggestions for fixing it. Failed tasks are refunded.
+
+Read `references/deep-company-research.md` for brief-writing, depth choice, and output-schema design guidance.
 
 ## Operate Existing Tables
 
@@ -780,6 +847,7 @@ Check that:
 
 - `references/column-guide.md`: column design rules plus a comprehensive library of good column configs
 - `references/finding-companies.md`: choose and operate semantic search, lookalike, and Deep Search
+- `references/deep-company-research.md`: write briefs, choose depth, and design output schemas for Deep Research
 - `references/researching-companies.md`: build or extend company research tables safely
 - `references/finding-people-at-companies.md`: branch from company tables into people workflows
 - `references/researching-people.md`: enrich standalone or generated people tables
