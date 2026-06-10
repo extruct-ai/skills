@@ -330,10 +330,16 @@ Typical asks:
 - "build an account plan brief for Stripe"
 - "do diligence on this company and give me a sourced report"
 
+Write the brief as a detailed paragraph, not a one-liner. Pack in everything you know
+from the conversation: what the user sells or researches, who the target buyer is, what
+decision the report supports, constraints, and time windows. The more context and
+specifics the brief carries, the better the report. If the user's ask is thin, ask one
+or two clarifying questions before creating the task.
+
 Create a task (markdown report):
 
 ```bash
-<extruct_api_cli> deep-research create --payload '{"brief":"Help me break into Shell. Find buying centers, recent initiatives, and practical sales angles.","depth":"medium"}'
+<extruct_api_cli> deep-research create --payload '{"brief":"We sell a cloud cost-optimization platform to large enterprises; typical buyers are VPs of Infrastructure and FinOps leads. I am preparing outreach to Shell. Research how Shell'"'"'s IT and digital organization is structured, who owns cloud infrastructure and FinOps decisions, which cloud, data, or efficiency initiatives they announced in the last 18 months, and which vendors or system integrators they already work with. I want practical conversation angles tied to live initiatives, plus any signals of cost-cutting programs or budget pressure.","depth":"medium"}'
 ```
 
 Create a task with structured output (`--payload-file` preferred for schemas):
@@ -346,7 +352,7 @@ Create a task with structured output (`--payload-file` preferred for schemas):
 
 ```json
 {
-  "brief": "Summarize Stripe's current enterprise initiatives for an account plan.",
+  "brief": "We provide fraud-prevention APIs for fintech platforms and are building an account plan for Stripe. Summarize Stripe's enterprise product initiatives from the last 12 months (payments, billing, risk, AI), identify concrete product or partnership angles where a fraud-prevention vendor could plug in, and flag risks that could stall a deal, such as in-house solutions, recent vendor consolidation, or compliance constraints.",
   "depth": "high",
   "output_schema": {
     "type": "object",

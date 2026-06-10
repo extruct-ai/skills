@@ -14,15 +14,27 @@ designing output schemas, and reading reports honestly.
 
 ## Write the brief like a request to an analyst
 
-Good briefs name the target and the decision the report should support:
+Good briefs are detailed paragraphs that name the target, the requester's own context,
+and the decision the report should support. One-liners produce unfocused reports.
 
-- Good: "Help me break into Shell. Find buying centers, recent initiatives, and practical sales angles for an enterprise data product."
-- Good: "Diligence brief on Acme Robotics: funding history, key customers, competitive position, and open risks."
-- Bad: "Tell me about Shell." (no decision to support; the report will be unfocused)
+- Good: "We sell a cloud cost-optimization platform to large enterprises; typical
+  buyers are VPs of Infrastructure and FinOps leads. I am preparing outreach to Shell.
+  Research how Shell's IT and digital organization is structured, who owns cloud
+  infrastructure and FinOps decisions, which cloud, data, or efficiency initiatives
+  they announced in the last 18 months, and which vendors or system integrators they
+  already work with. I want practical conversation angles tied to live initiatives,
+  plus any signals of cost-cutting programs or budget pressure."
+- Good: "We are a seed-stage investor evaluating Acme Robotics for a follow-on round.
+  Build a diligence brief: funding history and investors, key customers and revenue
+  signals, the competitive landscape for warehouse automation, recent leadership
+  changes, and open risks we should pressure-test in the partner meeting."
+- Bad: "Help me break into Shell." (no context about what you sell or who you target)
+- Bad: "Tell me about Stripe." (no decision to support; the report will be unfocused)
 
-Include context the agents cannot guess: what you sell, the angle you care about, time
-windows when freshness matters. The brief can be long (up to 20,000 characters) —
-pasting context is fine.
+Include everything the research agents cannot guess: what you sell, who your buyer is,
+the angle you care about, time windows when freshness matters, what you already know.
+The brief can be long (up to 20,000 characters) — pasting context is encouraged, and
+more specific briefs reliably produce better reports.
 
 Vague-but-valid briefs run; truly targetless or unusable briefs are rejected
 asynchronously with suggestions in `failure_reason`, and nothing is charged.
