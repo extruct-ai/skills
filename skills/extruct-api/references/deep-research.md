@@ -1,6 +1,6 @@
-# Deep Company Research Playbook
+# Deep Research Playbook
 
-Deep Research turns a free-text brief about one research target into a cited report.
+Deep Research turns a free-text brief about one research target — a company, a person, or a team — into a cited report.
 A reasoning agent plans the research, fans out research agents that gather evidence,
 and synthesizes the result. This playbook covers writing briefs, choosing depth,
 designing output schemas, and reading reports honestly.
@@ -8,6 +8,7 @@ designing output schemas, and reading reports honestly.
 ## When this path, when another
 
 - One target, deep sourced report (account plan, buyer research, diligence): Deep Research.
+- A person or team — research a lead before outreach or a meeting: Deep Research.
 - Many companies matching criteria: Deep Search.
 - The same questions across a list of companies, repeatably: a company table.
 - One company's profile facts, instantly: company lookup.
@@ -28,11 +29,14 @@ and the decision the report should support. One-liners produce unfocused reports
   Build a diligence brief: funding history and investors, key customers and revenue
   signals, the competitive landscape for warehouse automation, recent leadership
   changes, and open risks we should pressure-test in the partner meeting."
+- Good: "Here is my company: example.com. We sell AI-powered sales-enablement software to mid-market B2B teams. Research this person and the team they work with: https://www.linkedin.com/in/example-profile. I want their role and scope, what their team owns, recent initiatives or public statements, tools they already use, and the best angle to open a conversation."
 - Bad: "Help me break into Shell." (no context about what you sell or who you target)
 - Bad: "Tell me about Stripe." (no decision to support; the report will be unfocused)
 
 Include everything the research agents cannot guess: what you sell, who your buyer is,
 the angle you care about, time windows when freshness matters, what you already know.
+For people targets, include the LinkedIn profile URL (or full name plus company) and
+your own company and offer — the report is only as targeted as the brief.
 The brief can be long (up to 20,000 characters) — pasting context is encouraged, and
 more specific briefs reliably produce better reports.
 

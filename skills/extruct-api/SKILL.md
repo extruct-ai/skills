@@ -1,6 +1,6 @@
 ---
 name: extruct-api
-description: Run explicit Extruct API tasks through the bundled Extruct CLI. Covers Deep Search, Deep Company Research, semantic search, lookalike search, company and people tables, column operations, enrichment, and contact finding.
+description: Run explicit Extruct API tasks through the bundled Extruct CLI. Covers Deep Search, Deep Research on companies and people, semantic search, lookalike search, company and people tables, column operations, enrichment, and contact finding.
 ---
 
 # Extruct API
@@ -45,7 +45,7 @@ This section covers the default operating intent of the skill: identify the Extr
    - if the user provides an Extruct task URL or a raw task UUID, treat it as an existing Deep Search task first
    - known company lookup: fetch the canonical company profile for one domain or UUID
    - company discovery: semantic search, lookalike search, or Deep Search
-   - company research report: Deep Company Research for a deep, cited report on one target
+   - research report: Deep Research for a deep, cited report on one target — a company, a person, or a team
    - existing table operation: inspect, add/update rows or columns, run, poll, read
    - company-table workflow: enrich or score companies in a reusable table
    - people workflow: find people at companies or enrich existing people rows
@@ -318,9 +318,9 @@ If Deep Search payload fields, task states, or resume behavior are unclear, veri
 
 Read `references/finding-companies.md` when the task is a fuller company-discovery workflow instead of a single search command.
 
-### Deep Company Research
+### Deep Research
 
-Use Deep Research when the user wants a deep, cited report on one research target — account planning, buyer research, initiative summaries, diligence — rather than a list of companies. For discovering many companies, use Deep Search; for repeatable enrichment across a list, use tables.
+Use Deep Research when the user wants a deep, cited report on one research target — a company, a person, or a team: account planning, buyer research, researching a lead before outreach, initiative summaries, diligence. For discovering many companies, use Deep Search; for repeatable enrichment across a list, use tables.
 
 `deep-research create` is Pro-gated. Run the plan-access preflight before it.
 
@@ -328,6 +328,7 @@ Typical asks:
 
 - "research Shell for me: buying centers, initiatives, sales angles"
 - "build an account plan brief for Stripe"
+- "research this lead and the team they work with before my call"
 - "do diligence on this company and give me a sourced report"
 
 Write the brief as a detailed paragraph, not a one-liner. Pack in everything you know
@@ -340,6 +341,12 @@ Create a task (markdown report):
 
 ```bash
 <extruct_api_cli> deep-research create --payload '{"brief":"We sell a cloud cost-optimization platform to large enterprises; typical buyers are VPs of Infrastructure and FinOps leads. I am preparing outreach to Shell. Research how Shell'"'"'s IT and digital organization is structured, who owns cloud infrastructure and FinOps decisions, which cloud, data, or efficiency initiatives they announced in the last 18 months, and which vendors or system integrators they already work with. I want practical conversation angles tied to live initiatives, plus any signals of cost-cutting programs or budget pressure.","depth":"medium"}'
+```
+
+People are first-class targets — include the user's own context and the profile to research:
+
+```bash
+<extruct_api_cli> deep-research create --payload '{"brief":"Here is my company: example.com. We sell AI-powered sales-enablement software to mid-market B2B teams. Research this person and the team they work with: https://www.linkedin.com/in/example-profile. I want their role and scope, what their team owns, recent initiatives or public statements, tools they already use, and the best angle to open a conversation.","depth":"medium"}'
 ```
 
 Create a task with structured output (`--payload-file` preferred for schemas):
@@ -387,7 +394,7 @@ Reading the result:
 - **Always surface `report.degradation_reasons` to the user** — plain-language notes when coverage was reduced (early finalization, failed research agents). Empty means a clean run.
 - On `failed`, read `failure_reason` and relay it: a rejected brief includes suggestions for fixing it. Failed tasks are refunded.
 
-Read `references/deep-company-research.md` for brief-writing, depth choice, and output-schema design guidance.
+Read `references/deep-research.md` for brief-writing, depth choice, and output-schema design guidance.
 
 ## Operate Existing Tables
 
@@ -683,6 +690,8 @@ Use broader role families for coverage, such as `sales leadership`, and exact ti
 
 Use this path when the user already has people rows or already has a generated child `people` table and now wants enrichment, contact data, or derived fields.
 
+For a deep one-off report on a single person or team (rather than repeatable table enrichment), use Deep Research instead — see the Deep Research section above.
+
 Typical asks:
 
 - "find work emails for these people"
@@ -853,7 +862,7 @@ Check that:
 
 - `references/column-guide.md`: column design rules plus a comprehensive library of good column configs
 - `references/finding-companies.md`: choose and operate semantic search, lookalike, and Deep Search
-- `references/deep-company-research.md`: write briefs, choose depth, and design output schemas for Deep Research
+- `references/deep-research.md`: write briefs, choose depth, and design output schemas for Deep Research
 - `references/researching-companies.md`: build or extend company research tables safely
 - `references/finding-people-at-companies.md`: branch from company tables into people workflows
 - `references/researching-people.md`: enrich standalone or generated people tables
