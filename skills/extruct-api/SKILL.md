@@ -188,6 +188,8 @@ Use `--filters` when the user specifies geography, city, company size, or founde
 }
 ```
 
+**Result limits and paging.** A single request returns at most 250 results (the page size); read deeper by holding `--limit` near 250 and walking `--offset` in steps. Paid plans (Starter, Pro) can page through up to 2,000 results per query; the free tier is capped at 25. To assemble a full list, keep paging until you reach the plan ceiling or a page returns fewer rows than `--limit`.
+
 If search filters or pagination behavior appear different from the guidance here, verify current request and response details in the official API reference before guessing.
 
 ### Lookalike Search
